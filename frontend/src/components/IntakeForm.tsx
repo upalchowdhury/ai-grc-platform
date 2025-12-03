@@ -1,9 +1,68 @@
 import { useState } from 'react';
-import { Info, CheckCircle2, ChevronRight, ChevronLeft, Save } from 'lucide-react';
+import { Info, CheckCircle2, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export function IntakeForm() {
+    const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        requestor_id: '',
+        department: '',
+        data_sensitivity: 'Internal',
+        ai_model_provider: 'OpenAI',
+        pii_involved: false,
+        customer_data_involved: false,
+        expected_user_base: 'Internal Only',
+        business_impact: '',
+        vendor_name: '',
+        // Extra fields for UI but mapped to backend
+        launch_date: '',
+        problem_statement: ''
+    });
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+        }));
+    };
+
+    const handleSubmit = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // Map to backend expected format
+            const payload = {
+                title: formData.title,
+                description: formData.description,
+                requestor_id: formData.requestor_id || 'user-123', // Default for now
+                department: formData.department,
+                data_sensitivity: formData.data_sensitivity,
+                ai_model_provider: formData.ai_model_provider,
+                pii_involved: formData.pii_involved,
+                customer_data_involved: formData.customer_data_involved,
+                expected_user_base: formData.expected_user_base,
+                business_impact: formData.business_impact,
+                vendor_name: formData.vendor_name
+            };
+
+            await axios.post('http://localhost:8000/intake/', payload);
+            navigate('/governance'); // Redirect to governance dashboard after success
+        } catch (err) {
+            setError('Failed to submit intake form. Please try again.');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const sections = [
         { id: 1, title: 'Project Basics', description: 'Core information' },
@@ -48,6 +107,13 @@ export function IntakeForm() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden transition-all duration-500">
                 <div className="p-8 min-h-[600px]">
 
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+                            <AlertCircle className="w-5 h-5" />
+                            {error}
+                        </div>
+                    )}
+
                     {/* Step 1: Project Basics */}
                     {currentStep === 1 && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -59,45 +125,56 @@ export function IntakeForm() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="col-span-2 space-y-2">
                                     <label className="block text-sm font-medium text-gray-700">Project Name *</label>
-                                    <input type="text" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g., Customer Service Chatbot" />
+                                    <input
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        type="text"
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="e.g., Customer Service Chatbot"
+                                    />
                                 </div>
 
                                 <div className="col-span-2 space-y-2">
                                     <label className="block text-sm font-medium text-gray-700">Description *</label>
-                                    <textarea rows={4} className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Describe the purpose and functionality..." />
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        rows={4}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="Describe the purpose and functionality..."
+                                    />
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700">Business Unit *</label>
-                                    <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                        <option>Select Unit...</option>
-                                        <option>Engineering</option>
-                                        <option>Product</option>
-                                        <option>Marketing</option>
-                                        <option>HR</option>
-                                        <option>Finance</option>
-                                        <option>Legal</option>
+                                    <select
+                                        name="department"
+                                        value={formData.department}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                    >
+                                        <option value="">Select Unit...</option>
+                                        <option value="Engineering">Engineering</option>
+                                        <option value="Product">Product</option>
+                                        <option value="Marketing">Marketing</option>
+                                        <option value="HR">HR</option>
+                                        <option value="Finance">Finance</option>
+                                        <option value="Legal">Legal</option>
                                     </select>
                                 </div>
 
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-700">Project Owner *</label>
-                                    <input type="text" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="email@company.com" />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Executive Sponsor</label>
-                                    <input type="text" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="VP or C-Level Sponsor" />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Expected Launch Date</label>
-                                    <input type="date" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
-                                </div>
-
-                                <div className="col-span-2 space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Problem Statement</label>
-                                    <textarea rows={3} className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="What business problem does this solve?" />
+                                    <input
+                                        name="requestor_id"
+                                        value={formData.requestor_id}
+                                        onChange={handleChange}
+                                        type="text"
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="email@company.com"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -114,59 +191,73 @@ export function IntakeForm() {
                             <div className="space-y-6">
                                 <h3 className="text-lg font-medium text-gray-900">Data Types Processed</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {[
-                                        { label: 'PII (Personally Identifiable Info)', desc: 'Names, emails, phones' },
-                                        { label: 'PHI (Protected Health Info)', desc: 'Medical records, biometrics' },
-                                        { label: 'PCI (Payment Card Info)', desc: 'Credit cards, bank accounts' },
-                                        { label: 'Intellectual Property', desc: 'Trade secrets, code, patents' },
-                                        { label: 'Public Data', desc: 'Wiki articles, press releases' },
-                                        { label: 'Internal Non-Sensitive', desc: 'Internal memos, schedules' }
-                                    ].map((item, i) => (
-                                        <div key={i} className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/30 cursor-pointer transition-all">
-                                            <input type="checkbox" className="mt-1 w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" />
-                                            <div>
-                                                <span className="block text-sm font-medium text-gray-900">{item.label}</span>
-                                                <span className="block text-xs text-gray-500">{item.desc}</span>
-                                            </div>
+                                    <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/30 cursor-pointer transition-all">
+                                        <input
+                                            name="pii_involved"
+                                            checked={formData.pii_involved}
+                                            onChange={handleChange}
+                                            type="checkbox"
+                                            className="mt-1 w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                                        />
+                                        <div>
+                                            <span className="block text-sm font-medium text-gray-900">PII (Personally Identifiable Info)</span>
+                                            <span className="block text-xs text-gray-500">Names, emails, phones</span>
                                         </div>
-                                    ))}
+                                    </div>
+                                    <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/30 cursor-pointer transition-all">
+                                        <input
+                                            name="customer_data_involved"
+                                            checked={formData.customer_data_involved}
+                                            onChange={handleChange}
+                                            type="checkbox"
+                                            className="mt-1 w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                                        />
+                                        <div>
+                                            <span className="block text-sm font-medium text-gray-900">Customer Data</span>
+                                            <span className="block text-xs text-gray-500">Confidential customer information</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <h3 className="text-lg font-medium text-gray-900 mt-8">Impact Assessment</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">Number of Users Impacted</label>
-                                        <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                            <option>&lt; 100</option>
-                                            <option>100 - 1,000</option>
-                                            <option>1,000 - 10,000</option>
-                                            <option>10,000+</option>
+                                        <label className="block text-sm font-medium text-gray-700">Data Sensitivity</label>
+                                        <select
+                                            name="data_sensitivity"
+                                            value={formData.data_sensitivity}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        >
+                                            <option value="Public">Public</option>
+                                            <option value="Internal">Internal</option>
+                                            <option value="Confidential">Confidential</option>
+                                            <option value="Restricted">Restricted</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">Decision Autonomy</label>
-                                        <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                            <option>Human in the loop (Recommendation only)</option>
-                                            <option>Human over the loop (Supervisor review)</option>
-                                            <option>Fully Automated (No human intervention)</option>
+                                        <label className="block text-sm font-medium text-gray-700">Expected User Base</label>
+                                        <select
+                                            name="expected_user_base"
+                                            value={formData.expected_user_base}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        >
+                                            <option value="Internal Only">Internal Only</option>
+                                            <option value="Public">Public</option>
+                                            <option value="Partners">Partners</option>
                                         </select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">External Facing?</label>
-                                        <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                            <option>Internal Only</option>
-                                            <option>External (Customers/Partners)</option>
-                                            <option>Public (Open Internet)</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-700">Financial Impact Potential</label>
-                                        <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                            <option>Low (&lt; $10k)</option>
-                                            <option>Medium ($10k - $100k)</option>
-                                            <option>High ($100k - $1M)</option>
-                                            <option>Critical (&gt; $1M)</option>
-                                        </select>
+                                    <div className="col-span-2 space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">Business Impact</label>
+                                        <textarea
+                                            name="business_impact"
+                                            value={formData.business_impact}
+                                            onChange={handleChange}
+                                            rows={3}
+                                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                            placeholder="What is the business impact if this system fails?"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -183,51 +274,32 @@ export function IntakeForm() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Model Type</label>
-                                    <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                        <option>LLM (GPT-4, Claude, etc.)</option>
-                                        <option>Computer Vision</option>
-                                        <option>Predictive Analytics / Regression</option>
-                                        <option>Recommendation Engine</option>
-                                        <option>Other</option>
+                                    <label className="block text-sm font-medium text-gray-700">AI Model Provider</label>
+                                    <select
+                                        name="ai_model_provider"
+                                        value={formData.ai_model_provider}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                    >
+                                        <option value="OpenAI">OpenAI</option>
+                                        <option value="Azure">Azure</option>
+                                        <option value="AWS">AWS</option>
+                                        <option value="GCP">GCP</option>
+                                        <option value="HuggingFace">HuggingFace</option>
+                                        <option value="Other">Other</option>
                                     </select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Hosting Environment</label>
-                                    <select className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                                        <option>On-Premise</option>
-                                        <option>Private Cloud (AWS/Azure/GCP)</option>
-                                        <option>SaaS / 3rd Party API</option>
-                                        <option>Hybrid</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Vendor / Foundation Model</label>
-                                    <input type="text" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g., OpenAI, Anthropic, HuggingFace" />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Training Data Source</label>
-                                    <input type="text" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="e.g., Internal DB, Public Web, Purchased" />
-                                </div>
-
-                                <div className="col-span-2 space-y-4">
-                                    <label className="block text-sm font-medium text-gray-700">Integrations</label>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                        {['Slack', 'Email', 'CRM (Salesforce)', 'HRIS (Workday)', 'Code Repo (GitHub)', 'Jira'].map(tool => (
-                                            <label key={tool} className="flex items-center gap-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                                                <input type="checkbox" className="rounded text-indigo-600" />
-                                                <span className="text-sm">{tool}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="col-span-2 space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">System Architecture Diagram URL</label>
-                                    <input type="url" className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="https://confluence..." />
+                                    <label className="block text-sm font-medium text-gray-700">Vendor Name (if applicable)</label>
+                                    <input
+                                        name="vendor_name"
+                                        value={formData.vendor_name}
+                                        onChange={handleChange}
+                                        type="text"
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="e.g., OpenAI, Anthropic"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -237,50 +309,36 @@ export function IntakeForm() {
                     {currentStep === 4 && (
                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                             <div className="border-b border-gray-100 pb-4">
-                                <h2 className="text-2xl font-semibold text-gray-900">Compliance & Governance</h2>
-                                <p className="text-gray-500 mt-1">Regulatory requirements and ethical considerations.</p>
+                                <h2 className="text-2xl font-semibold text-gray-900">Review & Submit</h2>
+                                <p className="text-gray-500 mt-1">Please review your answers before submitting.</p>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 flex gap-3">
                                     <Info className="w-6 h-6 text-indigo-600 flex-shrink-0" />
-                                    <p className="text-sm text-indigo-900">Based on your previous answers, the following compliance checks are recommended.</p>
+                                    <p className="text-sm text-indigo-900">By submitting this form, you agree to the AI Governance Policy and acknowledge that this system will be subject to review.</p>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {[
-                                        'Does this system make decisions that legally or significantly affect individuals?',
-                                        'Is there a mechanism for users to opt-out or contest decisions?',
-                                        'Has a bias audit been performed on the training data?',
-                                        'Is the output watermarked or disclosed as AI-generated?',
-                                        'Do you have a fallback plan if the model fails?',
-                                        'Is user consent obtained for data usage?',
-                                        'Are data retention policies defined?',
-                                        'Does the system comply with GDPR/CCPA right to be forgotten?'
-                                    ].map((q, i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                            <span className="text-sm font-medium text-gray-800 w-2/3">{q}</span>
-                                            <div className="flex gap-4">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name={`q${i}`} className="text-indigo-600 focus:ring-indigo-500" />
-                                                    <span className="text-sm text-gray-600">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name={`q${i}`} className="text-indigo-600 focus:ring-indigo-500" />
-                                                    <span className="text-sm text-gray-600">No</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name={`q${i}`} className="text-indigo-600 focus:ring-indigo-500" />
-                                                    <span className="text-sm text-gray-600">N/A</span>
-                                                </label>
-                                            </div>
+                                <div className="bg-gray-50 p-6 rounded-lg space-y-4">
+                                    <h3 className="font-medium text-gray-900">Summary</h3>
+                                    <dl className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Project Name</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{formData.title}</dd>
                                         </div>
-                                    ))}
-                                </div>
-
-                                <div className="space-y-2 pt-4">
-                                    <label className="block text-sm font-medium text-gray-700">Additional Compliance Notes</label>
-                                    <textarea rows={3} className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" placeholder="Any other regulatory considerations..." />
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Department</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{formData.department}</dd>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Data Sensitivity</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{formData.data_sensitivity}</dd>
+                                        </div>
+                                        <div className="sm:col-span-1">
+                                            <dt className="text-sm font-medium text-gray-500">Model Provider</dt>
+                                            <dd className="mt-1 text-sm text-gray-900">{formData.ai_model_provider}</dd>
+                                        </div>
+                                    </dl>
                                 </div>
                             </div>
                         </div>
@@ -305,11 +363,6 @@ export function IntakeForm() {
                     </button>
 
                     <div className="flex gap-3">
-                        <button className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-all flex items-center gap-2">
-                            <Save className="w-4 h-4" />
-                            Save Draft
-                        </button>
-
                         {currentStep < 4 ? (
                             <button
                                 onClick={nextStep}
@@ -320,9 +373,11 @@ export function IntakeForm() {
                             </button>
                         ) : (
                             <button
-                                className="px-6 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-sm transition-all flex items-center gap-2"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="px-6 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Submit Assessment
+                                {loading ? 'Submitting...' : 'Submit Assessment'}
                                 <CheckCircle2 className="w-4 h-4" />
                             </button>
                         )}

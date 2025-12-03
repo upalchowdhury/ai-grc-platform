@@ -5,7 +5,17 @@ export default {
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
     theme: {
-        extend: {},
+        extend: {
+            fontFamily: {
+                sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            },
+            colors: {
+                // Keep default Tailwind colors, just documenting our primary ones
+                // Primary: indigo, violet
+                // Neutrals: slate
+                // Functional: emerald, amber, rose, sky
+            },
+        },
     },
     plugins: [],
 }

@@ -11,8 +11,15 @@ router = APIRouter()
 
 class IntakeRequestCreate(BaseModel):
     title: str
-    description: str
-    requestor_id: str # Changed from uuid.UUID to str to match frontend mock ID
+    description: Optional[str] = None
+    requestor_name: str
+    requestor_email: str
+    model_used: Optional[str] = None
+    model_provider: Optional[str] = None
+    use_case: Optional[str] = None
+    deployment_type: Optional[str] = None
+    data_types: Optional[List[str]] = []
+    data_volume: Optional[str] = None
     
     class Config:
         extra = "allow"
@@ -35,11 +42,17 @@ def create_intake_request(request: IntakeRequestCreate, db: Session = Depends(ge
     # Extract known fields
     request_data = request.model_dump()
     title = request_data.pop("title")
-    description = request_data.pop("description")
-    requestor_id = request_data.pop("requestor_id")
+    description = request_data.pop("description", "")
+    requestor_name = request_data.pop("requestor_name")
+    requestor_email = request_data.pop("requestor_email")
+    
+    # For now, use email as requestor_id (in Phase 3 we'll add proper users)
+    requestor_id = requestor_email
     
     # The rest goes into details
     details = request_data
+    details['requestor_name'] = requestor_name
+    details['requestor_email'] = requestor_email
 
     db_request = IntakeRequest(
         title=title,

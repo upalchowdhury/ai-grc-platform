@@ -94,6 +94,21 @@ class RiskScore(Base):
 
     request = relationship("IntakeRequest", back_populates="risk_scores")
 
+class ComplianceChecklist(Base):
+    __tablename__ = "compliance_checklists"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    request_id = Column(String, ForeignKey("intake_requests.id"))
+    framework = Column(String, nullable=False)  # NIST, SOC2, SOX, OWASP, MAESTRO
+    questions = Column(JSON)  # Array of {category, question, answer, notes}
+    completed = Column(Boolean, default=False)
+    completed_by = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    request = relationship("IntakeRequest", backref="checklists")
+    completer = relationship("User", foreign_keys=[completed_by])
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
